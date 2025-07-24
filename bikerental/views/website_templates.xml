@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Simple Test Template First -->
+    <template id="bikerental_test" name="Bike Rental Test">
+        <t t-call="website.layout">
+            <div id="wrap">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h1>Bike Rental Test Page</h1>
+                            <p>If you can see this page, the routing is working!</p>
+                            <p><a href="/bikerental">Go to main bike rental page</a></p>
+                            <p>This is a custom webpage from the Bike Rental module.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Main Bike Rental Homepage Template -->
+    <template id="bikerental_home" name="Bike Rental Home">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <!-- Header Section -->
+                    <div class="row mt-4 mb-4">
+                        <div class="col-12">
+                            <h1 class="text-center">Welcome to Our Bike Rental</h1>
+                            <p class="text-center text-muted">Discover and rent amazing bikes from our collection</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="row mb-4">
+                        <div class="col-md-8 offset-md-2">
+                            <form action="/bikerental/search" method="get" class="d-flex">
+                                <input type="text" name="search" class="form-control me-2" 
+                                       placeholder="Search bikes by name, brand..." 
+                                       t-att-value="search_term or ''"/>
+                                <button type="submit" class="btn btn-primary">Search</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="text-center">
+                                <a href="/bikerental" class="btn btn-outline-secondary me-2 mb-2"
+                                   t-att-class="'btn btn-secondary me-2 mb-2' if not current_type else 'btn btn-outline-secondary me-2 mb-2'">
+                                    All Types
+                                </a>
+                                <t t-foreach="types" t-as="type">
+                                    <a t-attf-href="/bikerental/type/#{type.id}" 
+                                       class="btn btn-outline-secondary me-2 mb-2"
+                                       t-att-class="'btn btn-secondary me-2 mb-2' if current_type and current_type.id == type.id else 'btn btn-outline-secondary me-2 mb-2'">
+                                        <t t-esc="type.name"/>
+                                        <span class="badge bg-light text-dark ms-1" t-esc="type.bike_count"/>
+                                    </a>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Type Display -->
+                    <t t-if="current_type">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h3>Bikes in <span t-esc="current_type.name"/></h3>
+                                <p t-if="current_type.description" t-esc="current_type.description"/>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Search Results Info -->
+                    <t t-if="search_term">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h3>Search Results for "<span t-esc="search_term"/>"</h3>
+                                <p><span t-esc="len(bikes)"/> bike(s) found</p>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Bikes Grid -->
+                    <div class="row">
+                        <t t-if="not bikes">
+                            <div class="col-12 text-center">
+                                <h4>No bikes found</h4>
+                                <p t-if="search_term">Try adjusting your search terms</p>
+                                <p t-if="current_type">This type doesn't have any bikes yet</p>
+                            </div>
+                        </t>
+                        <t t-foreach="bikes" t-as="bike">
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">
+                                            <a t-attf-href="/bikerental/bike/#{bike.id}" class="text-decoration-none">
+                                                <t t-esc="bike.name"/>
+                                            </a>
+                                        </h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">
+                                            Brand: <t t-esc="bike.brand"/>
+                                        </h6>
+                                        <t t-if="bike.bike_type_id">
+                                            <small class="text-muted">
+                                                Type: <t t-esc="bike.bike_type_id.name"/>
+                                            </small>
+                                        </t>
+                                        <div class="mt-auto">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="h5 text-primary mb-0">$<t t-esc="'%.2f' % bike.rental_price"/></span>
+                                                <t t-if="bike.stock_quantity > 0">
+                                                    <span class="badge bg-success">Available</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-danger">Out of Stock</span>
+                                                </t>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a t-attf-href="/bikerental/bike/#{bike.id}" class="btn btn-primary btn-sm w-100">
+                                                    View Details
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+
+                    <!-- No bikes message -->
+                    <t t-if="not bikes and not search_term and not current_type">
+                        <div class="row">
+                            <div class="col-12 text-center">
+                                <h4>Welcome to our bike rental!</h4>
+                                <p>We're currently updating our collection. Please check back soon!</p>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Bike Detail Template -->
+    <template id="bike_detail" name="Bike Detail">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb" class="mt-3">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/bikerental">Bike Rental</a></li>
+                            <li class="breadcrumb-item" t-if="bike.bike_type_id">
+                                <a t-attf-href="/bikerental/type/#{bike.bike_type_id.id}" t-esc="bike.bike_type_id.name"/>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page" t-esc="bike.name"/>
+                        </ol>
+                    </nav>
+
+                    <!-- Bike Details -->
+                    <div class="row mt-4">
+                        <div class="col-md-8">
+                            <h1 t-esc="bike.name"/>
+                            <h4 class="text-muted mb-3">Brand: <t t-esc="bike.brand"/></h4>
+                            <div class="row mb-4">
+                                <div class="col-sm-6">
+                                    <h3 class="text-primary">$<t t-esc="'%.2f' % bike.rental_price"/></h3>
+                                    <t t-if="bike.stock_quantity > 0">
+                                        <span class="badge bg-success fs-6">Available (<t t-esc="bike.stock_quantity"/> in stock)</span>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="badge bg-danger fs-6">Out of Stock</span>
+                                    </t>
+                                </div>
+                            </div>
+                            <t t-if="bike.description">
+                                <h5>Description</h5>
+                                <p t-esc="bike.description"/>
+                            </t>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Bike Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless">
+                                        <tr t-if="bike.serial_number">
+                                            <td><strong>Serial #:</strong></td>
+                                            <td t-esc="bike.serial_number"/>
+                                        </tr>
+                                        <tr t-if="bike.model">
+                                            <td><strong>Model:</strong></td>
+                                            <td t-esc="bike.model"/>
+                                        </tr>
+                                        <tr t-if="bike.purchase_date">
+                                            <td><strong>Purchased:</strong></td>
+                                            <td t-esc="bike.purchase_date"/>
+                                        </tr>
+                                        <tr t-if="bike.gear_count">
+                                            <td><strong>Gears:</strong></td>
+                                            <td t-esc="bike.gear_count"/>
+                                        </tr>
+                                        <tr t-if="bike.color">
+                                            <td><strong>Color:</strong></td>
+                                            <td t-esc="bike.color"/>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Related Bikes -->
+                    <t t-if="related_bikes">
+                        <div class="row mt-5">
+                            <div class="col-12">
+                                <h3>Related Bikes</h3>
+                                <div class="row">
+                                    <t t-foreach="related_bikes" t-as="related_bike">
+                                        <div class="col-lg-3 col-md-6 mb-3">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">
+                                                        <a t-attf-href="/bikerental/bike/#{related_bike.id}" class="text-decoration-none">
+                                                            <t t-esc="related_bike.name"/>
+                                                        </a>
+                                                    </h6>
+                                                    <p class="card-text text-muted small">Brand: <t t-esc="related_bike.brand"/></p>
+                                                    <p class="card-text">$<t t-esc="'%.2f' % related_bike.rental_price"/></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Simple Fallback Template -->
+    <template id="bikerental_simple" name="Bike Rental Simple">
+        <t t-call="website.layout">
+            <div id="wrap">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h1>Bike Rental</h1>
+                            <p>Welcome to our bike rental!</p>
+                            <t t-if="error">
+                                <div class="alert alert-warning">
+                                    <strong>Error:</strong> <span t-esc="error"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Add menu item to website -->
+    <record id="menu_bikerental_website" model="website.menu">
+        <field name="name">Bike Rental</field>
+        <field name="url">/bikerental</field>
+        <field name="parent_id" ref="website.main_menu"/>
+        <field name="sequence">50</field>
+    </record>
+    <record id="menu_bikerental_test" model="website.menu">
+        <field name="name">Bike Rental Test</field>
+        <field name="url">/bikerental/test</field>
+        <field name="parent_id" ref="website.main_menu"/>
+        <field name="sequence">51</field>
+    </record>
+</odoo>

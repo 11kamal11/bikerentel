@@ -1,3 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_bikerental_bike,access.bikerental.bike,model_bikerental_bike,,1,1,1,1
 access_bikerental_bike_type,access.bikerental.bike.type,model_bikerental_bike_type,,1,1,1,1
+access_bikerental_order,access.bikerental.order,model_bikerental_order,,1,1,1,1
+access_bikerental_order_line,access.bikerental.order.line,model_bikerental_order_line,,1,1,1,1
+access_bikerental_cart,access.bikerental.cart,model_bikerental_cart,,1,1,1,1

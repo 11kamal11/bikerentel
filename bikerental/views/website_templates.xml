@@ -26,8 +26,20 @@
                     <!-- Header Section -->
                     <div class="row mt-4 mb-4">
                         <div class="col-12">
-                            <h1 class="text-center">Welcome to Our Bike Rental</h1>
-                            <p class="text-center text-muted">Discover and rent amazing bikes from our collection</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="text-center mb-0">Welcome to Our Bike Rental</h1>
+                                    <p class="text-center text-muted">Discover and rent amazing bikes from our collection</p>
+                                </div>
+                                <div>
+                                    <a href="/bikerental/cart" class="btn btn-outline-primary position-relative">
+                                        <i class="fa fa-shopping-cart"></i> Cart
+                                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                                            0
+                                        </span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -111,7 +123,7 @@
                                         </t>
                                         <div class="mt-auto">
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <span class="h5 text-primary mb-0">$<t t-esc="'%.2f' % bike.rental_price"/></span>
+                                                <span class="h5 text-primary mb-0">$<t t-esc="'%.2f' % bike.rental_price"/>/day</span>
                                                 <t t-if="bike.stock_quantity > 0">
                                                     <span class="badge bg-success">Available</span>
                                                 </t>
@@ -119,10 +131,16 @@
                                                     <span class="badge bg-danger">Out of Stock</span>
                                                 </t>
                                             </div>
-                                            <div class="mt-2">
-                                                <a t-attf-href="/bikerental/bike/#{bike.id}" class="btn btn-primary btn-sm w-100">
+                                            <div class="mt-2 d-flex gap-2">
+                                                <a t-attf-href="/bikerental/bike/#{bike.id}" class="btn btn-outline-primary btn-sm flex-fill">
                                                     View Details
                                                 </a>
+                                                <t t-if="bike.stock_quantity > 0">
+                                                    <button class="btn btn-primary btn-sm flex-fill add-to-cart" 
+                                                            t-att-data-bike-id="bike.id">
+                                                        Add to Cart
+                                                    </button>
+                                                </t>
                                             </div>
                                         </div>
                                     </div>
@@ -180,6 +198,45 @@
                             <t t-if="bike.description">
                                 <h5>Description</h5>
                                 <p t-esc="bike.description"/>
+                            </t>
+                            
+                            <!-- Rental Form -->
+                            <t t-if="bike.stock_quantity > 0">
+                                <div class="card mt-4">
+                                    <div class="card-header">
+                                        <h5>Rent This Bike</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Start Date</label>
+                                                <input type="datetime-local" class="form-control" id="rental_start_date"/>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">End Date</label>
+                                                <input type="datetime-local" class="form-control" id="rental_end_date"/>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Quantity</label>
+                                                <select class="form-control" id="rental_quantity">
+                                                    <t t-foreach="range(1, min(bike.stock_quantity + 1, 6))" t-as="qty">
+                                                        <option t-att-value="qty" t-esc="qty"/>
+                                                    </t>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="rental_calculation" class="mb-3" style="display: none;">
+                                            <div class="alert alert-info">
+                                                <strong>Rental Cost:</strong> <span id="rental_cost">$0.00</span>
+                                                <br/><small>(<span id="rental_days">0</span> days × $<t t-esc="'%.2f' % bike.rental_price"/> per day × <span id="rental_qty">1</span> bike(s))</small>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-primary btn-lg w-100 add-to-cart-detailed" 
+                                                t-att-data-bike-id="bike.id">
+                                            Add to Cart
+                                        </button>
+                                    </div>
+                                </div>
                             </t>
                         </div>
                         <div class="col-md-4">
@@ -279,4 +336,560 @@
         <field name="parent_id" ref="website.main_menu"/>
         <field name="sequence">51</field>
     </record>
+
+    <record id="menu_bikerental_cart" model="website.menu">
+        <field name="name">Cart</field>
+        <field name="url">/bikerental/cart</field>
+        <field name="parent_id" ref="website.main_menu"/>
+        <field name="sequence">52</field>
+    </record>
+
+    <record id="menu_bikerental_orders" model="website.menu">
+        <field name="name">My Orders</field>
+        <field name="url">/bikerental/my_orders</field>
+        <field name="parent_id" ref="website.main_menu"/>
+        <field name="sequence">53</field>
+    </record>
+
+    <!-- Cart Page Template -->
+    <template id="cart_page" name="Shopping Cart">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h1>Shopping Cart</h1>
+                            <t t-if="not cart_items">
+                                <div class="text-center mt-5">
+                                    <h3>Your cart is empty</h3>
+                                    <p>Start browsing our bikes to add them to your cart.</p>
+                                    <a href="/bikerental" class="btn btn-primary">Browse Bikes</a>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Bike</th>
+                                                <th>Rental Period</th>
+                                                <th>Quantity</th>
+                                                <th>Price/Day</th>
+                                                <th>Total</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="cart_items" t-as="item">
+                                                <tr>
+                                                    <td>
+                                                        <strong t-esc="item.bike_id.name"/>
+                                                        <br/><small class="text-muted" t-esc="item.bike_id.brand"/>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="item.start_date and item.end_date">
+                                                            <t t-esc="item.start_date.strftime('%Y-%m-%d')"/> to <t t-esc="item.end_date.strftime('%Y-%m-%d')"/>
+                                                            <br/><small>(<t t-esc="item.days"/> days)</small>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <small class="text-muted">Please set dates in checkout</small>
+                                                        </t>
+                                                    </td>
+                                                    <td t-esc="item.quantity"/>
+                                                    <td>$<t t-esc="'%.2f' % item.bike_id.rental_price"/></td>
+                                                    <td>$<t t-esc="'%.2f' % item.total_price"/></td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-danger remove-from-cart" 
+                                                                t-att-data-item-id="item.id">Remove</button>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th colspan="4" class="text-right">Total:</th>
+                                                <th>$<t t-esc="'%.2f' % total"/></th>
+                                                <th></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <div class="row mt-4">
+                                    <div class="col-md-6">
+                                        <a href="/bikerental" class="btn btn-secondary">Continue Shopping</a>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <a href="/bikerental/checkout" class="btn btn-primary">Proceed to Checkout</a>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Checkout Page Template -->
+    <template id="checkout_page" name="Checkout">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h1>Checkout</h1>
+                        </div>
+                    </div>
+                    <form action="/bikerental/process_order" method="post">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>Customer Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="customer_name" class="form-label">Full Name *</label>
+                                                <input type="text" class="form-control" id="customer_name" name="customer_name" required=""/>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="customer_email" class="form-label">Email *</label>
+                                                <input type="email" class="form-control" id="customer_email" name="customer_email" required=""/>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="customer_phone" class="form-label">Phone</label>
+                                                <input type="tel" class="form-control" id="customer_phone" name="customer_phone"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>Rental Period</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="start_date" class="form-label">Start Date *</label>
+                                                <input type="datetime-local" class="form-control" id="start_date" name="start_date" required=""/>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="end_date" class="form-label">End Date *</label>
+                                                <input type="datetime-local" class="form-control" id="end_date" name="end_date" required=""/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>Payment Method</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" value="cash" checked=""/>
+                                            <label class="form-check-label" for="payment_cash">
+                                                Cash Payment (Pay at pickup)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_online" value="online"/>
+                                            <label class="form-check-label" for="payment_online">
+                                                Online Payment (Credit/Debit Card)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>Additional Notes</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <textarea class="form-control" name="notes" rows="3" placeholder="Any special requests or notes..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>Order Summary</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <t t-foreach="cart_items" t-as="item">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>
+                                                    <strong t-esc="item.bike_id.name"/>
+                                                    <br/><small>Qty: <t t-esc="item.quantity"/></small>
+                                                </div>
+                                                <div>$<t t-esc="'%.2f' % item.total_price"/></div>
+                                            </div>
+                                        </t>
+                                        <hr/>
+                                        <div class="d-flex justify-content-between">
+                                            <strong>Total:</strong>
+                                            <strong>$<t t-esc="'%.2f' % total"/></strong>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100 mt-3">Place Order</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Payment Page Template -->
+    <template id="payment_page" name="Online Payment">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4 justify-content-center">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Online Payment</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <strong>Order:</strong> <t t-esc="order.name"/><br/>
+                                        <strong>Total Amount:</strong> $<t t-esc="'%.2f' % order.total_amount"/>
+                                    </div>
+                                    <form action="/bikerental/process_payment" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <input type="hidden" name="order_id" t-att-value="order.id"/>
+                                        <div class="mb-3">
+                                            <label for="card_number" class="form-label">Card Number *</label>
+                                            <input type="text" class="form-control" id="card_number" name="card_number" placeholder="1234 5678 9012 3456" required=""/>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="expiry" class="form-label">Expiry Date *</label>
+                                                <input type="text" class="form-control" id="expiry" name="expiry" placeholder="MM/YY" required=""/>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cvv" class="form-label">CVV *</label>
+                                                <input type="text" class="form-control" id="cvv" name="cvv" placeholder="123" required=""/>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="card_name" class="form-label">Cardholder Name *</label>
+                                            <input type="text" class="form-control" id="card_name" name="card_name" required=""/>
+                                        </div>
+                                        <button type="submit" class="btn btn-success w-100">Pay Now</button>
+                                    </form>
+                                    <div class="mt-3 text-center">
+                                        <small class="text-muted">This is a demo payment system. Enter any valid card number to simulate payment.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Order Success Template -->
+    <template id="order_success" name="Order Success">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4 justify-content-center">
+                        <div class="col-md-8 text-center">
+                            <div class="alert alert-success">
+                                <h1><i class="fa fa-check-circle"></i> Order Confirmed!</h1>
+                                <p class="lead">Thank you for your rental order!</p>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5>Order Details</h5>
+                                    <p><strong>Order Number:</strong> <t t-esc="order.name"/></p>
+                                    <p><strong>Customer:</strong> <t t-esc="order.customer_name"/></p>
+                                    <p><strong>Email:</strong> <t t-esc="order.customer_email"/></p>
+                                    <p><strong>Rental Period:</strong> <t t-esc="order.start_date"/> to <t t-esc="order.end_date"/></p>
+                                    <p><strong>Total Amount:</strong> $<t t-esc="'%.2f' % order.total_amount"/></p>
+                                    <p><strong>Payment Method:</strong> <t t-esc="order.payment_method.title()"/></p>
+                                    <p><strong>Payment Status:</strong> <span t-att-class="'badge bg-success' if order.payment_status == 'paid' else 'badge bg-warning'" t-esc="order.payment_status.title()"/></p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <a href="/bikerental" class="btn btn-primary">Continue Shopping</a>
+                                <a href="/bikerental/my_orders?email=" t-att-href="'/bikerental/my_orders?email=' + order.customer_email" class="btn btn-outline-primary">View My Orders</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Payment Failed Template -->
+    <template id="payment_failed" name="Payment Failed">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4 justify-content-center">
+                        <div class="col-md-8 text-center">
+                            <div class="alert alert-danger">
+                                <h1><i class="fa fa-times-circle"></i> Payment Failed</h1>
+                                <p class="lead">There was an issue processing your payment.</p>
+                            </div>
+                            <div class="mt-4">
+                                <a t-attf-href="/bikerental/payment/#{order.id}" class="btn btn-primary">Try Again</a>
+                                <a href="/bikerental" class="btn btn-outline-primary">Back to Store</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Order Lookup Template -->
+    <template id="order_lookup" name="Order Lookup">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4 justify-content-center">
+                        <div class="col-md-6">
+                            <h1>Find My Orders</h1>
+                            <form action="/bikerental/my_orders" method="get">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Enter your email address</label>
+                                    <input type="email" class="form-control" id="email" name="email" required=""/>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Find Orders</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- My Orders Template -->
+    <template id="my_orders" name="My Orders">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h1>My Orders</h1>
+                            <p>Orders for: <strong t-esc="email"/></p>
+                            <t t-if="not orders">
+                                <div class="alert alert-info">
+                                    <p>No orders found for this email address.</p>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Date</th>
+                                                <th>Rental Period</th>
+                                                <th>Amount</th>
+                                                <th>Payment</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="orders" t-as="order">
+                                                <tr>
+                                                    <td t-esc="order.name"/>
+                                                    <td t-esc="order.create_date.strftime('%Y-%m-%d')"/>
+                                                    <td>
+                                                        <t t-esc="order.start_date.strftime('%Y-%m-%d')"/> to 
+                                                        <t t-esc="order.end_date.strftime('%Y-%m-%d')"/>
+                                                    </td>
+                                                    <td>$<t t-esc="'%.2f' % order.total_amount"/></td>
+                                                    <td>
+                                                        <span t-att-class="'badge bg-success' if order.payment_status == 'paid' else 'badge bg-warning'" 
+                                                              t-esc="order.payment_status.title()"/>
+                                                    </td>
+                                                    <td>
+                                                        <span t-att-class="'badge bg-primary' if order.state == 'confirmed' else 'badge bg-success' if order.state == 'in_progress' else 'badge bg-secondary'" 
+                                                              t-esc="order.state.title()"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- JavaScript for Cart functionality -->
+    <template id="cart_js" name="Cart JavaScript">
+        <script type="text/javascript">
+            $(document).ready(function() {
+                // Calculate rental cost on bike detail page
+                function calculateRentalCost() {
+                    var startDate = $('#rental_start_date').val();
+                    var endDate = $('#rental_end_date').val();
+                    var quantity = parseInt($('#rental_quantity').val()) || 1;
+                    var pricePerDay = parseFloat($('[t-esc="bike.rental_price"]').first().text()) || 0;
+                    
+                    if (startDate && endDate) {
+                        var start = new Date(startDate);
+                        var end = new Date(endDate);
+                        var timeDiff = end.getTime() - start.getTime();
+                        var days = Math.max(1, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+                        var totalCost = days * pricePerDay * quantity;
+                        
+                        $('#rental_days').text(days);
+                        $('#rental_qty').text(quantity);
+                        $('#rental_cost').text('$' + totalCost.toFixed(2));
+                        $('#rental_calculation').show();
+                    } else {
+                        $('#rental_calculation').hide();
+                    }
+                }
+                
+                $('#rental_start_date, #rental_end_date, #rental_quantity').on('change', calculateRentalCost);
+                
+                // Add to cart functionality (simple)
+                $('.add-to-cart').click(function() {
+                    var bikeId = $(this).data('bike-id');
+                    var button = $(this);
+                    
+                    button.prop('disabled', true).text('Adding...');
+                    
+                    $.ajax({
+                        url: '/bikerental/add_to_cart',
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            params: {
+                                bike_id: bikeId,
+                                quantity: 1
+                            }
+                        }),
+                        success: function(result) {
+                            if (result.success) {
+                                button.text('Added!').removeClass('btn-primary').addClass('btn-success');
+                                $('#cart-count').text(result.cart_count).show();
+                                setTimeout(function() {
+                                    button.text('Add to Cart').removeClass('btn-success').addClass('btn-primary').prop('disabled', false);
+                                }, 2000);
+                            } else {
+                                alert('Error: ' + (result.error || 'Unknown error'));
+                                button.text('Add to Cart').prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            alert('Error adding to cart');
+                            button.text('Add to Cart').prop('disabled', false);
+                        }
+                    });
+                });
+
+                // Add to cart functionality (detailed with dates)
+                $('.add-to-cart-detailed').click(function() {
+                    var bikeId = $(this).data('bike-id');
+                    var button = $(this);
+                    var startDate = $('#rental_start_date').val();
+                    var endDate = $('#rental_end_date').val();
+                    var quantity = parseInt($('#rental_quantity').val()) || 1;
+                    
+                    if (!startDate || !endDate) {
+                        alert('Please select rental start and end dates');
+                        return;
+                    }
+                    
+                    button.prop('disabled', true).text('Adding...');
+                    
+                    $.ajax({
+                        url: '/bikerental/add_to_cart',
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            params: {
+                                bike_id: bikeId,
+                                quantity: quantity,
+                                start_date: startDate,
+                                end_date: endDate
+                            }
+                        }),
+                        success: function(result) {
+                            if (result.success) {
+                                button.text('Added to Cart!').removeClass('btn-primary').addClass('btn-success');
+                                $('#cart-count').text(result.cart_count).show();
+                                setTimeout(function() {
+                                    window.location.href = '/bikerental/cart';
+                                }, 1500);
+                            } else {
+                                alert('Error: ' + (result.error || 'Unknown error'));
+                                button.text('Add to Cart').removeClass('btn-success').addClass('btn-primary').prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            alert('Error adding to cart');
+                            button.text('Add to Cart').removeClass('btn-success').addClass('btn-primary').prop('disabled', false);
+                        }
+                    });
+                });
+
+                // Remove from cart functionality
+                $('.remove-from-cart').click(function() {
+                    var itemId = $(this).data('item-id');
+                    var row = $(this).closest('tr');
+                    
+                    $.ajax({
+                        url: '/bikerental/remove_from_cart',
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            params: {
+                                cart_item_id: itemId
+                            }
+                        }),
+                        success: function(result) {
+                            if (result.success) {
+                                row.fadeOut(function() {
+                                    $(this).remove();
+                                    location.reload(); // Reload to update totals
+                                });
+                            } else {
+                                alert('Error: ' + (result.error || 'Unknown error'));
+                            }
+                        },
+                        error: function() {
+                            alert('Error removing item');
+                        }
+                    });
+                });
+
+                // Update cart count on page load
+                function updateCartCount() {
+                    // This would ideally be a server-side call, but for now we'll keep it simple
+                    var cartCount = parseInt(localStorage.getItem('cart_count') || '0');
+                    if (cartCount > 0) {
+                        $('#cart-count').text(cartCount).show();
+                    }
+                }
+                
+                updateCartCount();
+            });
+        </script>
+    </template>
+
+    <!-- Include JavaScript in layout -->
+    <template id="bikerental_assets" inherit_id="website.layout">
+        <xpath expr="//head" position="inside">
+            <t t-call="bikerental.cart_js"/>
+        </xpath>
+    </template>
 </odoo>

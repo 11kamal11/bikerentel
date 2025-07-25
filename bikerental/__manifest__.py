@@ -8,8 +8,10 @@
     'category': 'Sales',
     'depends': ['base', 'website'],
     'data': [
+        'data/sequence.xml',
         'security/ir.model.access.csv',
         'views/bike_view.xml',
+        'views/rental_order_view.xml',
         'views/website_templates.xml',
     ],
     'installable': True,

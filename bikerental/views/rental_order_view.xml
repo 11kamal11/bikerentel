@@ -2,16 +2,35 @@
     <field name="name">rental.order.tree</field>
     <field name="model">bikerental.order</field>
     <field name="arch" type="xml">
-        <tree string="Rental Orders">
-            <field name="name"/>
-            <field name="customer_name"/>
-            <field name="start_date"/>
-            <field name="end_date"/>
-            <field name="total_days"/>
-            <field name="total_amount"/>
-            <field name="payment_method"/>
-            <field name="payment_status"/>
-            <field name="state"/>
-        </tree>
+        <kanban string="Rental Orders">
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="oe_kanban_global_click">
+                        <strong>
+                            <field name="name"/>
+                        </strong>
+                        <div>
+                            <field name="customer_name"/>
+                        </div>
+                        <div>
+                            <field name="start_date"/>
+                            -
+                            <field name="end_date"/>
+                        </div>
+                        <div>
+                            <field name="total_days"/>
+                            <field name="total_amount"/>
+                        </div>
+                        <div>
+                            <field name="payment_method"/>
+                            <field name="payment_status"/>
+                        </div>
+                        <div>
+                            <field name="state"/>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
     </field>
 </record>

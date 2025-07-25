@@ -8,13 +8,13 @@
             <form string="Rental Order">
                 <header>
                     <button name="action_confirm" string="Confirm" type="object" 
-                            class="btn-primary" invisible="state != 'draft'"/>
+                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
                     <button name="action_start_rental" string="Start Rental" type="object" 
-                            class="btn-primary" invisible="state != 'confirmed'"/>
+                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'confirmed')]}"/>
                     <button name="action_return" string="Mark as Returned" type="object" 
-                            class="btn-primary" invisible="state != 'in_progress'"/>
+                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'in_progress')]}"/>
                     <button name="action_cancel" string="Cancel" type="object" 
-                            invisible="state in ('returned', 'cancelled')"/>
+                            attrs="{'invisible': [('state', 'in', ['returned', 'cancelled'])]}"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,in_progress,returned"/>
                 </header>
                 <sheet>
@@ -62,8 +62,7 @@
                                 </kanban>
                             </field>
                             <div class="oe_subtotal_footer oe_right">
-                                <field name="total_amount" widget="monetary" 
-                                       options="{'currency_field': 'currency_id'}" readonly="1"/>
+                                <field name="total_amount" readonly="1"/>
                             </div>
                         </page>
                         <page string="Notes">
@@ -73,6 +72,56 @@
                 </sheet>
             </form>
         </field>
+    </record>
+
+    <record id="view_rental_order_tree" model="ir.ui.view">
+        <field name="name">rental.order.tree</field>
+        <field name="model">bikerental.order</field>
+        <field name="arch" type="xml">
+            <tree string="Rental Orders">
+                <field name="name"/>
+                <field name="customer_name"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="total_days"/>
+                <field name="total_amount"/>
+                <field name="payment_method"/>
+                <field name="payment_status"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_rental_order_search" model="ir.ui.view">
+        <field name="name">rental.order.search</field>
+        <field name="model">bikerental.order</field>
+        <field name="arch" type="xml">
+            <search string="Rental Orders">
+                <field name="name"/>
+                <field name="customer_name"/>
+                <field name="customer_email"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter string="In Progress" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="Returned" name="returned" domain="[('state', '=', 'returned')]"/>
+                <separator/>
+                <filter string="Cash Payment" name="cash" domain="[('payment_method', '=', 'cash')]"/>
+                <filter string="Online Payment" name="online" domain="[('payment_method', '=', 'online')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Payment Method" name="group_payment" context="{'group_by': 'payment_method'}"/>
+                    <filter string="Payment Status" name="group_payment_status" context="{'group_by': 'payment_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_rental_orders" model="ir.actions.act_window">
+        <field name="name">Rental Orders</field>
+        <field name="res_model">bikerental.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_rental_order_search"/>
     </record>
 
     <!-- Update Menu Items -->

@@ -8,13 +8,13 @@
             <form string="Rental Order">
                 <header>
                     <button name="action_confirm" string="Confirm" type="object" 
-                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                            class="btn-primary" invisible="state != 'draft'"/>
                     <button name="action_start_rental" string="Start Rental" type="object" 
-                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'confirmed')]}"/>
+                            class="btn-primary" invisible="state != 'confirmed'"/>
                     <button name="action_return" string="Mark as Returned" type="object" 
-                            class="btn-primary" attrs="{'invisible': [('state', '!=', 'in_progress')]}"/>
+                            class="btn-primary" invisible="state != 'in_progress'"/>
                     <button name="action_cancel" string="Cancel" type="object" 
-                            attrs="{'invisible': [('state', 'in', ['returned', 'cancelled'])]}"/>
+                            invisible="state in ('returned', 'cancelled')"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,in_progress,returned"/>
                 </header>
                 <sheet>
